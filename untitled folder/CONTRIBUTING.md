@@ -6,7 +6,7 @@
 - Follow PEP 8 standards
 - Use 4 spaces for indentation
 - Maximum line length: 88 characters
-- Use type hints where possible
+- Utilize type hints where possible
 
 Example:
 ```python
