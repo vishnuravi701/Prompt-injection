@@ -114,18 +114,18 @@ function App() {
       <div className="content">
         {/* Title */}
         <div className="title-section">
-          <h1 className="main-title">Prompt Shield</h1>
-          <p className="subtitle">Detect prompt injection attempts before they reach your model</p>
+          <h1 className="main-title">detect prompt injection. keep ai output safe.</h1>
+          <p className="subtitle">analyze suspicious prompt patterns, preserve original responses, and generate safer prompt rewrites in one workflow.</p>
         </div>
 
         {/* Input Card */}
         <div className="input-card">
           <textarea
             className="prompt-input"
-            placeholder="Enter a prompt to analyze for injection attempts..."
+            placeholder="enter a prompt to analyze for injection attempts..."
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
-            rows={6}
+            rows={10}
           />
 
           <button
@@ -133,24 +133,24 @@ function App() {
             onClick={analyzePrompt}
             disabled={isAnalyzing || !prompt.trim()}
           >
-            {isAnalyzing ? 'Analyzing...' : 'Analyze Prompt'}
+            {isAnalyzing ? 'analyzing...' : 'analyze'}
           </button>
 
           {/* Results */}
           {result && (
             <div className="results-section">
               <div className={`result-badge ${result.isInjection ? 'danger' : 'safe'}`}>
-                {result.isInjection ? 'INJECTION DETECTED' : 'SAFE'}
+                {result.isInjection ? 'injection detected' : 'safe'}
               </div>
 
               <div className="result-details">
                 <div className="confidence">
-                  Confidence: {(result.confidence * 100).toFixed(1)}%
+                  confidence: {(result.confidence * 100).toFixed(1)}%
                 </div>
 
                 {result.attackType && (
                   <div className="attack-type">
-                    Attack Type: {result.attackType}
+                    attack type: {result.attackType}
                   </div>
                 )}
               </div>
