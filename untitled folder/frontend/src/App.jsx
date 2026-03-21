@@ -1,5 +1,23 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import './styles/App.css';
+
+const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY);
+const model = genAI.getGenerativeModel({
+  model: 'gemini-2.5-flash',
+  systemInstruction: {
+    parts: [
+      {
+        text: 'You are an AI-Safety assistant that helps users detect prompt injection attacks and suggests safer prompt rewrites. Keep responses concise and helpful.'
+      }
+    ]
+  }
+});
+
+const HERO_TITLE = 'detect prompt injection. keep ai output safe.';
+const HERO_SUBTITLE = 'safer, stronger, and better.';
+const SUB_CHAR_SPEED = 38;
+const PERIOD_PAUSE = 600;
 
 function App() {
   const [messages, setMessages] = useState([
@@ -10,8 +28,13 @@ function App() {
     }
   ]);
   const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(false);
   const [chatVisible, setChatVisible] = useState(false);
+  const messagesEndRef = useRef(null);
   const chatSectionRef = useRef(null);
+  const [titleFaded, setTitleFaded] = useState(false);
+  const [subCharCount, setSubCharCount] = useState(0);
+  const subtitleDone = subCharCount >= HERO_SUBTITLE.length;
 
   const floatingQuotes = useMemo(
     () => [
@@ -24,43 +47,82 @@ function App() {
     []
   );
 
-  const handleSend = (event) => {
+  const handleSend = async (event) => {
     event.preventDefault();
     const trimmed = input.trim();
-    if (!trimmed) {
-      return;
-    }
+    if (!trimmed || loading) return;
 
-    const userMessage = {
-      id: Date.now(),
-      role: 'user',
-      text: trimmed
-    };
-
-    const botReply = {
-      id: Date.now() + 1,
-      role: 'bot',
-      text: `Received. Potential injection cues detected: "${trimmed.slice(0, 36)}${trimmed.length > 36 ? '...' : ''}". I can help rewrite this into a safer prompt.`
-    };
-
-    setMessages((prev) => [...prev, userMessage, botReply]);
+    const userMessage = { id: Date.now(), role: 'user', text: trimmed };
+    hasSentMessage.current = true;
+    setMessages((prev) => [...prev, userMessage]);
     setInput('');
+    setLoading(true);
+
+    try {
+      const chatHistory = messages
+        .filter((m) => m.id !== 1)
+        .map((m) => ({
+          role: m.role === 'bot' ? 'model' : 'user',
+          parts: [{ text: m.text }]
+        }));
+
+      const chat = model.startChat({
+        history: chatHistory
+      });
+
+      const result = await chat.sendMessage(trimmed);
+      const reply = result.response.text();
+
+      setMessages((prev) => [
+        ...prev,
+        { id: Date.now(), role: 'bot', text: reply }
+      ]);
+    } catch (err) {
+      setMessages((prev) => [
+        ...prev,
+        { id: Date.now(), role: 'bot', text: `error: ${err.message}` }
+      ]);
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const hasSentMessage = useRef(false);
+
+  useEffect(() => {
+    if (!hasSentMessage.current) return;
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, [messages, loading]);
+
+  useEffect(() => {
+    const id = window.setTimeout(() => setTitleFaded(true), 100);
+    return () => window.clearTimeout(id);
+  }, []);
+
+  useEffect(() => {
+    if (!titleFaded) return undefined;
+    let i = 0;
+    let timer;
+    const step = () => {
+      i += 1;
+      setSubCharCount(i);
+      if (i >= HERO_SUBTITLE.length) return;
+      const ch = HERO_SUBTITLE[i - 1];
+      const delay = ch === '.' || ch === ',' ? PERIOD_PAUSE : SUB_CHAR_SPEED;
+      timer = window.setTimeout(step, delay);
+    };
+    timer = window.setTimeout(step, SUB_CHAR_SPEED);
+    return () => window.clearTimeout(timer);
+  }, [titleFaded]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting) {
-          setChatVisible(true);
-        }
+        if (entry.isIntersecting) setChatVisible(true);
       },
       { threshold: 0.2 }
     );
-
-    if (chatSectionRef.current) {
-      observer.observe(chatSectionRef.current);
-    }
-
+    if (chatSectionRef.current) observer.observe(chatSectionRef.current);
     return () => observer.disconnect();
   }, []);
 
@@ -83,10 +145,16 @@ function App() {
       </div>
 
       <main className="content">
-        <section className="hero-block">
-          <h1>detect prompt injection. keep ai output safe.</h1>
+        <section className="hero-block" aria-label="introduction">
+          <h1 className={`hero-title${titleFaded ? ' hero-title-visible' : ''}`}>
+            {HERO_TITLE}
+          </h1>
           <p className="subtitle">
-            analyze suspicious prompt patterns, preserve original responses, and generate safer prompt rewrites in one workflow.
+            <span className="sr-only">{HERO_SUBTITLE}</span>
+            <span aria-hidden="true">
+              {HERO_SUBTITLE.slice(0, subCharCount)}
+              {titleFaded && !subtitleDone && <span className="typing-cursor subtitle-cursor" />}
+            </span>
           </p>
         </section>
 
@@ -106,6 +174,12 @@ function App() {
                 {message.text}
               </div>
             ))}
+            {loading && (
+              <div className="chat-bubble bot typing-indicator">
+                <span /><span /><span />
+              </div>
+            )}
+            <div ref={messagesEndRef} />
           </div>
 
           <form className="chat-input-row" onSubmit={handleSend}>
@@ -115,7 +189,9 @@ function App() {
               onChange={(event) => setInput(event.target.value)}
               placeholder="type a prompt to check..."
             />
-            <button type="submit">send</button>
+            <button type="submit" disabled={loading}>
+              {loading ? '...' : 'send'}
+            </button>
           </form>
         </section>
       </main>
