@@ -1,0 +1,65 @@
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Node/Frontend
+node_modules/
+npm-debug.log
+yarn-error.log
+build/
+dist/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Model files (large files)
+*.pkl
+*.h5
+*.pt
+*.pth
+models/trained_model/*.bin
+models/trained_model/*.pt
+
+# Logs
+logs/
+*.log
+
+# API Keys and Secrets (double check!)
+.env
+secrets/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
