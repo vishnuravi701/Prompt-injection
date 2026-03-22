@@ -226,7 +226,7 @@ Flagged prompt: \"{user_prompt}\"
             Please provide:
             1. An analysis of why this prompt is vulnerable
             2. 3-5 specific fixes to make it more secure
-            3. An improved version of the prompt that is resistant to injection
+            3. An improved version of the prompt that is resistant to injection, keep the semantics but rephrase it to be safer.
             
             Format your response as:
             ANALYSIS: [Your analysis]
