@@ -47,7 +47,7 @@ async def health_check():
     }
 
 # Include API routes
-from api.routes import router
+from backend.api.routes import router
 app.include_router(router)
 
 # Root endpoint
@@ -59,6 +59,8 @@ async def root():
         "docs": "/docs",
         "version": "1.0.0"
     }
+
+from backend.api.routes import router
 
 if __name__ == "__main__":
     import uvicorn

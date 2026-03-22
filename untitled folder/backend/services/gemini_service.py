@@ -62,7 +62,14 @@ class GeminiService:
                     "error": "GEMINI_API_KEY not set or library not available"
                 }
             
-            model = genai.GenerativeModel(self.model_name)
+            generation_config = genai.GenerationConfig(
+                max_output_tokens=300,
+            )
+            
+            model = genai.GenerativeModel(
+                self.model_name,
+                generation_config=generation_config
+            )
             
             # Prepare the message
             full_prompt = prompt
@@ -106,7 +113,14 @@ class GeminiService:
                     "error": "Gemini API not configured"
                 }
 
-            model = genai.GenerativeModel(self.model_name)
+            generation_config = genai.GenerationConfig(
+                max_output_tokens=300,
+            )
+            
+            model = genai.GenerativeModel(
+                self.model_name,
+                generation_config=generation_config
+            )
 
             if is_injection:
                 formatted_confidence = f"{confidence * 100:.1f}%"
@@ -194,7 +208,14 @@ Flagged prompt: \"{user_prompt}\"
                     "error": "GEMINI_API_KEY not set"
                 }
             
-            model = genai.GenerativeModel(self.model_name)
+            generation_config = genai.GenerationConfig(
+                max_output_tokens=300,
+            )
+            
+            model = genai.GenerativeModel(
+                self.model_name,
+                generation_config=generation_config
+            )
             
             fix_prompt = f"""
             The following prompt is vulnerable to prompt injection attacks:
