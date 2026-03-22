@@ -105,6 +105,37 @@
   flex-wrap: wrap;
 }
 
+.llm-response-box {
+  margin-bottom: 25px;
+  padding: 18px;
+  border-radius: var(--border-radius);
+  background-color: #f8f9fa;
+  border: 1px solid #ced4da;
+}
+
+.llm-response-box.injection {
+  background-color: #fff6f6;
+  border-color: #f5c6cb;
+}
+
+.llm-response-box.safe {
+  background-color: #f4fff4;
+  border-color: #c3e6cb;
+}
+
+.llm-response-banner {
+  font-weight: 700;
+  margin-bottom: 10px;
+  color: #333;
+}
+
+.llm-response-content pre {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  margin: 0;
+  color: #1a1a1a;
+}
+
 .btn-primary, .btn-secondary {
   padding: 12px 20px;
   border-radius: var(--border-radius);

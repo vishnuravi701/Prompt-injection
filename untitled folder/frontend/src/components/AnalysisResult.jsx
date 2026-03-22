@@ -34,6 +34,19 @@ function AnalysisResult({ analysis, prompt, onTestVulnerability, onGetFixes, onR
           </div>
         </div>
 
+        {analysis.llm_response && (
+          <div className={`llm-response-box ${analysis.is_injection ? 'injection' : 'safe'}`}>
+            <div className="llm-response-banner">
+              {analysis.is_injection
+                ? 'injection detected — showing simulated + sanitized response'
+                : 'safe prompt — response generated from LLM'}
+            </div>
+            <div className="llm-response-content">
+              <pre>{analysis.llm_response}</pre>
+            </div>
+          </div>
+        )}
+
         <div className="action-buttons">
           {analysis.is_injection && (
             <>

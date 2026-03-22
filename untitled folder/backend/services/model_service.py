@@ -60,15 +60,15 @@ class ModelService:
         """
         try:
             if self.model is None:
-                logger.warning("Model not loaded, returning default response")
-                return {
-                    "is_injection": False,
-                    "confidence": 0.0,
-                    "risk_score": 0.0,
-                    "explanation": "Model not loaded. This is a demo response.",
-                    "model_status": "not_loaded"
-                }
+                logger.warning("Model not loaded, using heuristic fallback for injection detection")
+                return self._heuristic_prediction(prompt)
             
+            # Always run heuristic pre-check for high-risk phrases in addition to loaded model
+            heuristic = self._heuristic_prediction(prompt)
+            if heuristic.get("is_injection", False):
+                logger.info("Heuristic injection intercept triggered")
+                return heuristic
+
             # Preprocess the prompt
             if self.preprocessor:
                 processed_prompt = self.preprocessor.transform([prompt])
@@ -83,14 +83,15 @@ class ModelService:
             # Parse results
             is_injection = bool(prediction[0])
             confidence = max(probability[0])
-            risk_score = (confidence * 100) if is_injection else (0)
+            risk_score = (confidence * 100) if is_injection else 0.0
             
             return {
                 "is_injection": is_injection,
                 "confidence": float(confidence),
                 "risk_score": float(risk_score),
                 "explanation": self._generate_explanation(is_injection, confidence),
-                "model_status": "loaded"
+                "model_status": "loaded",
+                "attack_type": "prompt_injection" if is_injection else "safe"
             }
             
         except Exception as e:
@@ -109,6 +110,40 @@ class ModelService:
             return f"High likelihood of prompt injection detected (confidence: {confidence:.1%})"
         else:
             return f"Prompt appears to be legitimate (confidence: {(1-confidence):.1%})"
+
+    def _heuristic_prediction(self, prompt: str) -> dict:
+        """Fallback heuristic detection for prompt injection when model is missing."""
+        lower = prompt.lower()
+        attack_keywords = {
+            "jailbreak": "jailbreak",
+            "ignore previous instructions": "instruction_override",
+            "disable your content filters": "content_filter_bypass",
+            "bypass": "instruction_override",
+            "never mind": "instruction_override",
+            "don't follow rules": "instruction_override",
+            "go ahead and": "instruction_override",
+            "ignore {any}": "instruction_override"
+        }
+
+        for phrase, label in attack_keywords.items():
+            if phrase in lower:
+                return {
+                    "is_injection": True,
+                    "confidence": 0.99,
+                    "risk_score": 99.0,
+                    "explanation": f"Heuristic detected prompt injection pattern: '{phrase}'",
+                    "model_status": "heuristic_fallback",
+                    "attack_type": label
+                }
+
+        return {
+            "is_injection": False,
+            "confidence": 0.05,
+            "risk_score": 0.0,
+            "explanation": "No known injection heuristics matched.",
+            "model_status": "heuristic_fallback",
+            "attack_type": "safe"
+        }
 
 
 # Global instance

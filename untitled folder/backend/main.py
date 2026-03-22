@@ -6,10 +6,11 @@ import os
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
+from pathlib import Path
 import logging
 
 # Load environment variables
-load_dotenv()
+load_dotenv(Path(__file__).parent / ".env")
 
 # Configure logging
 logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"))
@@ -23,7 +24,7 @@ app = FastAPI(
 )
 
 # CORS Configuration
-origins = os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",")
+origins = os.getenv("CORS_ORIGINS", "http://localhost:3001").split(",")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -44,6 +45,10 @@ async def health_check():
         "service": "Prompt Injection Prevention API",
         "version": "1.0.0"
     }
+
+# Include API routes
+from api.routes import router
+app.include_router(router)
 
 # Root endpoint
 @app.get("/")

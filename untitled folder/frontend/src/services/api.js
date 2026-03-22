@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -22,10 +22,10 @@ export const analyzePrompt = async (prompt) => {
 // Test prompt vulnerability with Gemini
 export const testPromptVulnerability = async (prompt, systemInstruction = null) => {
   try {
-    const response = await api.post('/api/test-vulnerable', {
-      prompt,
-      system_instruction: systemInstruction,
-    });
+    const body = { prompt };
+    if (systemInstruction) body.system_instruction = systemInstruction;
+    
+    const response = await api.post('/api/test-vulnerable', body);
     return response.data;
   } catch (error) {
     throw new Error(error.response?.data?.detail || 'Failed to test vulnerability');
@@ -42,13 +42,26 @@ export const getFixSuggestions = async (prompt) => {
   }
 };
 
+// Submit prompt through two-stage pipeline (detection + conditional LLM call)
+export const submitPrompt = async (prompt, systemInstruction = null) => {
+  try {
+    const body = { prompt };
+    if (systemInstruction) body.system_instruction = systemInstruction;
+    
+    const response = await api.post('/api/analyze', body);
+    return response.data;
+  } catch (error) {
+    throw new Error(error.response?.data?.detail || 'Failed to submit prompt');
+  }
+};
+
 // Test improved prompt
 export const testImprovedPrompt = async (prompt, systemInstruction = null) => {
   try {
-    const response = await api.post('/api/test-improved-prompt', {
-      prompt,
-      system_instruction: systemInstruction,
-    });
+    const body = { prompt };
+    if (systemInstruction) body.system_instruction = systemInstruction;
+    
+    const response = await api.post('/api/test-improved-prompt', body);
     return response.data;
   } catch (error) {
     throw new Error(error.response?.data?.detail || 'Failed to test improved prompt');

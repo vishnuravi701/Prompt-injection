@@ -1,18 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { submitPrompt } from './services/api';
 import './styles/App.css';
-
-const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({
-  model: 'gemini-2.5-flash',
-  systemInstruction: {
-    parts: [
-      {
-        text: 'You are an AI-Safety assistant that helps users detect prompt injection attacks and suggests safer prompt rewrites. Keep responses concise and helpful.'
-      }
-    ]
-  }
-});
 
 const HERO_TITLE = 'detect prompt injection. keep ai output safe.';
 const HERO_SUBTITLE = 'safer, stronger, and better.';
@@ -20,6 +8,8 @@ const SUB_CHAR_SPEED = 38;
 const PERIOD_PAUSE = 600;
 
 function App() {
+  const [hasError, setHasError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   const [messages, setMessages] = useState([
     {
       id: 1,
@@ -30,8 +20,10 @@ function App() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [chatVisible, setChatVisible] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState(null);
   const messagesEndRef = useRef(null);
   const chatSectionRef = useRef(null);
+  const resultsSectionRef = useRef(null);
   const [titleFaded, setTitleFaded] = useState(false);
   const [subCharCount, setSubCharCount] = useState(0);
   const subtitleDone = subCharCount >= HERO_SUBTITLE.length;
@@ -52,6 +44,9 @@ function App() {
     const trimmed = input.trim();
     if (!trimmed || loading) return;
 
+    setHasError(false);
+    setErrorMessage('');
+
     const userMessage = { id: Date.now(), role: 'user', text: trimmed };
     hasSentMessage.current = true;
     setMessages((prev) => [...prev, userMessage]);
@@ -59,29 +54,28 @@ function App() {
     setLoading(true);
 
     try {
-      const chatHistory = messages
-        .filter((m) => m.id !== 1)
-        .map((m) => ({
-          role: m.role === 'bot' ? 'model' : 'user',
-          parts: [{ text: m.text }]
-        }));
+      const result = await submitPrompt(trimmed);
+      setAnalysisResult(result);
 
-      const chat = model.startChat({
-        history: chatHistory
-      });
-
-      const result = await chat.sendMessage(trimmed);
-      const reply = result.response.text();
+      let replyText;
+      if (result.is_injection) {
+        replyText = 'injection detected. scroll down to see results.';
+      } else {
+        replyText = 'safe prompt. scroll down for the full response.';
+      }
 
       setMessages((prev) => [
         ...prev,
-        { id: Date.now(), role: 'bot', text: reply }
+        { id: Date.now(), role: 'bot', text: replyText }
       ]);
     } catch (err) {
+      console.error('submitPrompt error', err);
       setMessages((prev) => [
         ...prev,
         { id: Date.now(), role: 'bot', text: `error: ${err.message}` }
       ]);
+      setHasError(true);
+      setErrorMessage(err.message || 'Unknown error');
     } finally {
       setLoading(false);
     }
@@ -93,6 +87,14 @@ function App() {
     if (!hasSentMessage.current) return;
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }, [messages, loading]);
+
+  useEffect(() => {
+    if (analysisResult && resultsSectionRef.current) {
+      setTimeout(() => {
+        resultsSectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 500); // Delay to allow fade-in animation
+    }
+  }, [analysisResult]);
 
   useEffect(() => {
     const id = window.setTimeout(() => setTitleFaded(true), 100);
@@ -125,6 +127,16 @@ function App() {
     if (chatSectionRef.current) observer.observe(chatSectionRef.current);
     return () => observer.disconnect();
   }, []);
+
+  if (hasError) {
+    return (
+      <div className="error-screen">
+        <h1>App Error</h1>
+        <p>{errorMessage}</p>
+        <p>Check the browser console and/or backend status.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="home-page">
@@ -194,6 +206,48 @@ function App() {
             </button>
           </form>
         </section>
+
+        {analysisResult && (
+          <section
+            ref={resultsSectionRef}
+            className="results-panels"
+          >
+            <div className="panels-container">
+              {/* Analysis Panel */}
+              <div className="result-panel analysis-panel">
+                <div className="panel-label">analysis</div>
+                <div className="panel-content">
+                  <div className={`verdict-badge ${analysisResult.is_injection ? '' : 'safe'}`}>
+                    {analysisResult.is_injection ? 'injection detected' : 'safe'}
+                  </div>
+                  <div className="confidence">confidence: {(analysisResult.confidence * 100).toFixed(1)}%</div>
+                  <div className="risk-score">risk score: {analysisResult.risk_score.toFixed(1)}</div>
+                  {analysisResult.attack_type && (
+                    <div className="attack-type">attack type: {analysisResult.attack_type}</div>
+                  )}
+                  <div className="divider"></div>
+                  <div className="explanation">{analysisResult.explanation}</div>
+                </div>
+              </div>
+
+              {/* Sanitized Response Panel */}
+              <div className="result-panel response-panel">
+                <div className="panel-label">sanitized response</div>
+                <div className="panel-content">
+                  {analysisResult.is_injection && (
+                    <div className="warning-banner">
+                      injection detected — showing simulated + sanitized response
+                    </div>
+                  )}
+                  {!analysisResult.is_injection && (
+                    <div className="safe-badge">safe</div>
+                  )}
+                  <div className="response-text">{analysisResult.llm_response}</div>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
       </main>
     </div>
   );

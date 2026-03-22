@@ -3,7 +3,7 @@ import PromptInput from '../components/PromptInput';
 import AnalysisResult from '../components/AnalysisResult';
 import VulnerabilityTest from '../components/VulnerabilityTest';
 import FixSuggestions from '../components/FixSuggestions';
-import { analyzePrompt } from '../services/api';
+import { submitPrompt } from '../services/api';
 import '../styles/PromptAnalyzer.css';
 
 function PromptAnalyzer() {
@@ -20,7 +20,7 @@ function PromptAnalyzer() {
     setStep(1);
 
     try {
-      const result = await analyzePrompt(inputPrompt);
+      const result = await submitPrompt(inputPrompt);
       setAnalysis(result);
     } catch (err) {
       setError(err.message || 'Error analyzing prompt');
